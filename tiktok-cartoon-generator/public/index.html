@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Générateur d'histoires</title>
+<style>
+  :root {
+    --ink: #1b1b1f;
+    --paper: #f7f3e9;
+    --panel: #232329;
+    --accent: #ff5a3c;
+    --accent-2: #ffc93c;
+    --line: #3a3a42;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--ink);
+    color: var(--paper);
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 16px;
+  }
+  .card {
+    width: 100%;
+    max-width: 480px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    padding: 32px;
+  }
+  h1 {
+    font-size: 28px;
+    line-height: 1.15;
+    margin: 0 0 4px;
+    letter-spacing: -0.02em;
+  }
+  h1 span { color: var(--accent-2); }
+  p.sub {
+    color: #b8b6c0;
+    margin: 0 0 28px;
+    font-size: 14px;
+  }
+  label {
+    display: block;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #9c9aa8;
+    margin-bottom: 8px;
+  }
+  textarea {
+    width: 100%;
+    min-height: 90px;
+    background: var(--ink);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    color: var(--paper);
+    padding: 14px;
+    font-size: 15px;
+    resize: vertical;
+    font-family: inherit;
+  }
+  textarea:focus { outline: 2px solid var(--accent); }
+  button {
+    margin-top: 18px;
+    width: 100%;
+    padding: 14px;
+    border: none;
+    border-radius: 12px;
+    background: var(--accent);
+    color: #1b1b1f;
+    font-weight: 700;
+    font-size: 15px;
+    cursor: pointer;
+  }
+  button:disabled { opacity: 0.6; cursor: default; }
+  .status {
+    margin-top: 16px;
+    font-size: 13px;
+    color: var(--accent-2);
+    min-height: 18px;
+  }
+  video {
+    margin-top: 20px;
+    width: 100%;
+    border-radius: 14px;
+    display: none;
+    background: #000;
+  }
+  .dialogue {
+    margin-top: 16px;
+    font-size: 13px;
+    color: #cfcdd6;
+    display: none;
+  }
+  .dialogue div { margin-bottom: 6px; }
+  .dialogue b { color: var(--accent-2); }
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1>Ton histoire, <span>en dessin animé.</span></h1>
+    <p class="sub">Écris un thème (une histoire d'amour, un moment en famille...), l'IA écrit et joue la scène.</p>
+
+    <label for="theme">Thème de l'histoire</label>
+    <textarea id="theme" placeholder="Ex: le jeune homme essaie d'inviter la jeune fille voilée à sortir"></textarea>
+
+    <button id="generateBtn">Générer la vidéo</button>
+    <div class="status" id="status"></div>
+
+    <div class="dialogue" id="dialogue"></div>
+    <video id="video" controls></video>
+  </div>
+
+<script>
+const btn = document.getElementById("generateBtn");
+const status = document.getElementById("status");
+const video = document.getElementById("video");
+const dialogueBox = document.getElementById("dialogue");
+
+btn.addEventListener("click", async () => {
+  const theme = document.getElementById("theme").value.trim();
+  if (!theme) {
+    status.textContent = "Écris un thème avant de générer.";
+    return;
+  }
+
+  btn.disabled = true;
+  video.style.display = "none";
+  dialogueBox.style.display = "none";
+  status.textContent = "Écriture du scénario et de la vidéo... (peut prendre 1-2 minutes)";
+
+  try {
+    const res = await fetch("/api/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ theme }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Erreur inconnue");
+
+    status.textContent = data.titre || "Vidéo générée";
+    video.src = data.video_url;
+    video.style.display = "block";
+
+    dialogueBox.innerHTML = data.dialogue
+      .map((d) => `<div><b>${d.personnage_id}:</b> ${d.texte}</div>`)
+      .join("");
+    dialogueBox.style.display = "block";
+  } catch (err) {
+    status.textContent = "Erreur : " + err.message;
+  } finally {
+    btn.disabled = false;
+  }
+});
+</script>
+</body>
+</html>

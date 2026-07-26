@@ -1,0 +1,50 @@
+{
+  "jeune_homme": {
+    "nom": "Le jeune homme",
+    "description": "Jeune homme décontracté, 18-22 ans",
+    "image": "public/characters/jeune_homme.png",
+    "voice": "austin"
+  },
+  "jeune_fille": {
+    "nom": "La jeune fille",
+    "description": "Jeune femme décontractée, 18-22 ans",
+    "image": "public/characters/jeune_fille.png",
+    "voice": "hannah"
+  },
+  "jeune_fille_voilee": {
+    "nom": "La jeune fille voilée",
+    "description": "Jeune femme voilée, 18-22 ans",
+    "image": "public/characters/jeune_fille_voilee.png",
+    "voice": "hannah"
+  },
+  "pere": {
+    "nom": "Le père",
+    "description": "Homme adulte, figure paternelle",
+    "image": "public/characters/pere.png",
+    "voice": "troy"
+  },
+  "mere": {
+    "nom": "La mère",
+    "description": "Femme adulte, figure maternelle",
+    "image": "public/characters/mere.png",
+    "voice": "hannah"
+  },
+  "enfant": {
+    "nom": "L'enfant",
+    "description": "Jeune enfant",
+    "image": "public/characters/enfant.png",
+    "voice": "hannah"
+  },
+  "pote_comique": {
+    "nom": "Le pote comique",
+    "description": "Ami drôle, personnage comique",
+    "image": "public/characters/pote_comique.png",
+    "voice": "austin"
+  },
+  "grand_pere": {
+    "nom": "Le grand-père",
+    "description": "Homme âgé, figure de sagesse",
+    "image": "public/characters/grand_pere.png",
+    "voice": "troy"
+  }
+}
