@@ -1,5 +1,6 @@
 import express from "express";
 import Groq from "groq-sdk";
+import { EdgeTTS } from "edge-tts-universal";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -42,6 +43,7 @@ Réponds UNIQUEMENT avec un JSON valide, sans texte autour, au format exact :
   ]
 }
 Règles :
+- IMPORTANT : le "titre", le "decor" et tous les "texte" du dialogue doivent être écrits EN FRANÇAIS, sans exception
 - 6 à 10 répliques maximum (vidéo courte, environ 30-45 secondes)
 - Utilise 1 à 3 personnages différents selon le thème
 - Ton naturel, accrocheur, adapté à TikTok (phrases courtes)
@@ -65,23 +67,23 @@ Règles :
   return script;
 }
 
-// ---------- 2. Génération de la voix (Groq TTS - Orpheus) pour chaque réplique ----------
-async function generateVoiceLine(text, voice, outPath) {
-  const response = await groq.audio.speech.create({
-    model: "canopylabs/orpheus-v1-english",
-    voice,
-    input: text,
-    response_format: "wav",
+// ---------- 2. Génération de la voix (Edge TTS, gratuit, sans clé API, compatible français) ----------
+async function generateVoiceLine(text, voiceName, outPath) {
+  const tts = new EdgeTTS(text, voiceName, {
+    rate: "+0%",
+    volume: "+0%",
+    pitch: "+0Hz",
   });
-  const buffer = Buffer.from(await response.arrayBuffer());
-  fs.writeFileSync(outPath, buffer);
+  const result = await tts.synthesize();
+  const audioBuffer = Buffer.from(await result.audio.arrayBuffer());
+  fs.writeFileSync(outPath, audioBuffer); // fichier mp3
 }
 
 // ---------- 3. Assemblage d'un clip par réplique (image + audio + sous-titre) ----------
 async function buildLineClip(line, index, jobDir) {
   const character = CHARACTERS[line.personnage_id];
-  const audioPath = path.join(jobDir, `line_${index}.wav`);
-  await generateVoiceLine(line.texte, character.voice, audioPath);
+  const audioPath = path.join(jobDir, `line_${index}.mp3`);
+  await generateVoiceLine(line.texte, character.edge_voice, audioPath);
 
   // Durée de l'audio
   const { stdout } = await execFileAsync("ffprobe", [
