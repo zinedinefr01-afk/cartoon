@@ -141,12 +141,10 @@ async function concatClips(clipPaths, jobDir, outPath) {
   ]);
 }
 
-// ---------- Endpoint principal ----------
-app.post("/api/generate", async (req, res) => {
-  const { theme } = req.body;
-  if (!theme) return res.status(400).json({ error: "Le champ 'theme' est requis." });
+// ---------- Suivi des jobs en mémoire ----------
+const jobs = {}; // jobId -> { status: 'pending' | 'done' | 'error', ...résultat ou erreur }
 
-  const jobId = Date.now().toString();
+async function runJob(jobId, theme) {
   const jobDir = path.join(__dirname, "tmp", jobId);
   fs.mkdirSync(jobDir, { recursive: true });
 
@@ -163,18 +161,38 @@ app.post("/api/generate", async (req, res) => {
     const finalPath = path.join(__dirname, "output", finalName);
     await concatClips(clipPaths, jobDir, finalPath);
 
-    res.json({
+    jobs[jobId] = {
+      status: "done",
       titre: script.titre,
       decor: script.decor,
       dialogue: script.dialogue,
       video_url: `/output/${finalName}`,
-    });
+    };
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: err.message });
+    jobs[jobId] = { status: "error", error: err.message };
   } finally {
     fs.rmSync(jobDir, { recursive: true, force: true });
   }
+}
+
+// ---------- Endpoint : démarre la génération (répond tout de suite) ----------
+app.post("/api/generate", (req, res) => {
+  const { theme } = req.body;
+  if (!theme) return res.status(400).json({ error: "Le champ 'theme' est requis." });
+
+  const jobId = Date.now().toString();
+  jobs[jobId] = { status: "pending" };
+  runJob(jobId, theme); // lancé en arrière-plan, pas de "await" ici
+
+  res.json({ job_id: jobId });
+});
+
+// ---------- Endpoint : vérifie l'avancement d'un job ----------
+app.get("/api/status/:jobId", (req, res) => {
+  const job = jobs[req.params.jobId];
+  if (!job) return res.status(404).json({ error: "Job introuvable." });
+  res.json(job);
 });
 
 app.use(express.static(path.join(__dirname, "public")));
