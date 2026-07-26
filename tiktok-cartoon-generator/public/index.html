@@ -133,28 +133,49 @@ btn.addEventListener("click", async () => {
   btn.disabled = true;
   video.style.display = "none";
   dialogueBox.style.display = "none";
-  status.textContent = "Écriture du scénario et de la vidéo... (peut prendre 1-2 minutes)";
+  status.textContent = "Écriture du scénario...";
 
   try {
-    const res = await fetch("/api/generate", {
+    const startRes = await fetch("/api/generate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ theme }),
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "Erreur inconnue");
+    const startData = await startRes.json();
+    if (!startRes.ok) throw new Error(startData.error || "Erreur inconnue");
 
-    status.textContent = data.titre || "Vidéo générée";
-    video.src = data.video_url;
-    video.style.display = "block";
+    const jobId = startData.job_id;
 
-    dialogueBox.innerHTML = data.dialogue
-      .map((d) => `<div><b>${d.personnage_id}:</b> ${d.texte}</div>`)
-      .join("");
-    dialogueBox.style.display = "block";
+    // Vérifie l'avancement toutes les 3 secondes
+    const poll = async () => {
+      const res = await fetch(`/api/status/${jobId}`);
+      const data = await res.json();
+
+      if (data.status === "pending") {
+        status.textContent = "Génération en cours (scénario, voix, montage vidéo)... ça peut prendre 1 à 3 minutes.";
+        setTimeout(poll, 3000);
+        return;
+      }
+
+      if (data.status === "error") {
+        throw new Error(data.error);
+      }
+
+      // status === "done"
+      status.textContent = data.titre || "Vidéo générée";
+      video.src = data.video_url;
+      video.style.display = "block";
+
+      dialogueBox.innerHTML = data.dialogue
+        .map((d) => `<div><b>${d.personnage_id}:</b> ${d.texte}</div>`)
+        .join("");
+      dialogueBox.style.display = "block";
+      btn.disabled = false;
+    };
+
+    poll();
   } catch (err) {
     status.textContent = "Erreur : " + err.message;
-  } finally {
     btn.disabled = false;
   }
 });
