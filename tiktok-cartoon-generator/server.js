@@ -68,13 +68,22 @@ Règles :
 }
 
 // ---------- 2. Génération de la voix (Edge TTS, gratuit, sans clé API, compatible français) ----------
+function withTimeout(promise, ms, label) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error(`Timeout (${label} a dépassé ${ms / 1000}s)`)), ms)
+    ),
+  ]);
+}
+
 async function generateVoiceLine(text, voiceName, outPath) {
   const tts = new EdgeTTS(text, voiceName, {
     rate: "+0%",
     volume: "+0%",
     pitch: "+0Hz",
   });
-  const result = await tts.synthesize();
+  const result = await withTimeout(tts.synthesize(), 20000, "génération voix");
   const audioBuffer = Buffer.from(await result.audio.arrayBuffer());
   fs.writeFileSync(outPath, audioBuffer); // fichier mp3
 }
@@ -149,17 +158,23 @@ async function runJob(jobId, theme) {
   fs.mkdirSync(jobDir, { recursive: true });
 
   try {
+    console.log(`[${jobId}] Génération du scénario...`);
     const script = await generateScript(theme);
+    console.log(`[${jobId}] Scénario prêt : "${script.titre}" (${script.dialogue.length} répliques)`);
 
     const clipPaths = [];
     for (let i = 0; i < script.dialogue.length; i++) {
+      console.log(`[${jobId}] Réplique ${i + 1}/${script.dialogue.length} : génération voix + clip...`);
       const clip = await buildLineClip(script.dialogue[i], i, jobDir);
       clipPaths.push(clip);
+      console.log(`[${jobId}] Réplique ${i + 1}/${script.dialogue.length} : terminée.`);
     }
 
+    console.log(`[${jobId}] Assemblage final de la vidéo...`);
     const finalName = `${jobId}.mp4`;
     const finalPath = path.join(__dirname, "output", finalName);
     await concatClips(clipPaths, jobDir, finalPath);
+    console.log(`[${jobId}] Vidéo terminée : ${finalName}`);
 
     jobs[jobId] = {
       status: "done",
